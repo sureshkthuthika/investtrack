@@ -140,9 +140,7 @@ pipeline {
                           investtrack-frontend=${FRONTEND_IMAGE}:${FRONTEND_TAG}
 
                         # Create frontend service
-                        oc expose deployment investtrack-frontend \
-                          --port=80 --target-port=80 \
-                          --dry-run=client -o yaml | oc apply -f -
+                        oc expose deployment investtrack-frontend --port=80 --target-port=8080 --dry-run=client -o yaml | oc apply -f -
 
                         # Create public frontend route
                         oc expose service investtrack-frontend \
