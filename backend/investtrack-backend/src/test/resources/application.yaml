@@ -1,0 +1,5 @@
+JWT_SECRET: "VGhpc0lzQVRlc3RPbmx5U2VjcmV0S2V5Rm9ySW52ZXN0VHJhY2s="
+
+spring:
+  mongodb:
+    uri: "mongodb://localhost:27017/investtrack_test"
