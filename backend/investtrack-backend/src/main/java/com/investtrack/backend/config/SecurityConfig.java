@@ -78,7 +78,9 @@ public class SecurityConfig {
                     .requestMatchers(
                             "/api/health",
                             "/actuator/health",
-                            "/api/auth/**"
+                            "/api/auth/**",
+                            "/ws",
+                            "/ws/**"
                     ).permitAll()
                     .requestMatchers("/api/portfolios/**").authenticated()
                     .anyRequest().denyAll()

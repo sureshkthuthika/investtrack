@@ -43,6 +43,21 @@ public class HoldingController {
                 portfolioId, jwt.getSubject());
     }
 
+    @PutMapping("/{holdingId}")
+    public Holding updateHolding(
+            @PathVariable String portfolioId,
+            @PathVariable String holdingId,
+            @Valid @RequestBody HoldingRequest request,
+            @AuthenticationPrincipal Jwt jwt) {
+
+        return holdingService.updateHolding(
+                portfolioId,
+                holdingId,
+                request,
+                jwt.getSubject()
+        );
+    }
+
     @DeleteMapping("/{holdingId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void deleteHolding(

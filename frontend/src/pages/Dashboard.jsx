@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import portfolioService from "../services/portfolioService";
 import authService from "../services/authService";
+import { connectToUserUpdates } from "../services/websocketService";
 
 function Dashboard() {
     const navigate = useNavigate();
@@ -18,6 +19,10 @@ function Dashboard() {
     const [name, setName] = useState("");
     const [description, setDescription] = useState("");
     const [creating, setCreating] = useState(false);
+    const [editingPortfolioId, setEditingPortfolioId] = useState(null);
+    const [editName, setEditName] = useState("");
+    const [editDescription, setEditDescription] = useState("");
+    const [savingEdit, setSavingEdit] = useState(false);
 
     // Load portfolios and their summaries
     const loadDashboard = async () => {
@@ -66,6 +71,13 @@ function Dashboard() {
 
     useEffect(() => {
         loadDashboard();
+
+        const disconnect = connectToUserUpdates((event) => {
+            console.log("Refreshing dashboard:", event.eventType);
+            loadDashboard();
+        });
+
+        return () => disconnect();
     }, []);
 
     // Calculate dashboard totals
@@ -114,6 +126,81 @@ function Dashboard() {
             setCreating(false);
         }
     };
+
+    // Start editing portfolio
+const handleEditPortfolio = (event, portfolio) => {
+    event.stopPropagation();
+
+    const portfolioId = portfolio.id ?? portfolio._id;
+
+    setEditingPortfolioId(portfolioId);
+    setEditName(portfolio.name || "");
+    setEditDescription(portfolio.description || "");
+    setError("");
+    setSuccess("");
+};
+
+// Save portfolio changes
+const handleSavePortfolio = async (event, portfolioId) => {
+    event.preventDefault();
+    event.stopPropagation();
+
+    try {
+        setSavingEdit(true);
+        setError("");
+        setSuccess("");
+
+        await portfolioService.updatePortfolio(portfolioId, {
+            name: editName.trim(),
+            description: editDescription.trim()
+        });
+
+        setEditingPortfolioId(null);
+        setSuccess("Portfolio updated successfully.");
+
+        await loadDashboard();
+    } catch (err) {
+        setError(
+            err.response?.data?.message ||
+            "Unable to update portfolio."
+        );
+    } finally {
+        setSavingEdit(false);
+    }
+};
+
+// Cancel editing
+const handleCancelEdit = (event) => {
+    event.stopPropagation();
+    setEditingPortfolioId(null);
+};
+
+// Delete portfolio
+const handleDeletePortfolio = async (event, portfolioId) => {
+    event.stopPropagation();
+
+    if (!window.confirm(
+        "Are you sure you want to delete this portfolio?"
+    )) {
+        return;
+    }
+
+    try {
+        setError("");
+        setSuccess("");
+
+        await portfolioService.deletePortfolio(portfolioId);
+
+        setSuccess("Portfolio deleted successfully.");
+
+        await loadDashboard();
+    } catch (err) {
+        setError(
+            err.response?.data?.message ||
+            "Unable to delete portfolio."
+        );
+    }
+};
 
     // Logout
     const handleLogout = () => {
@@ -253,11 +340,66 @@ function Dashboard() {
                                     style={{ cursor: "pointer" }}
                                 >
 
-                                    <h3>{portfolio.name}</h3>
+                                    {editingPortfolioId === portfolioId ? (
+                    <form
+                        onSubmit={(event) =>
+                            handleSavePortfolio(event, portfolioId)
+                        }
+                        onClick={(event) => event.stopPropagation()}
+                    >
+                        <label>Portfolio Name</label>
 
-                                    <p>
-                                        {portfolio.description}
-                                    </p>
+                        <input
+                            value={editName}
+                            onChange={(event) => setEditName(event.target.value)}
+                            required
+                        />
+
+                        <label>Description</label>
+
+                        <textarea
+                            value={editDescription}
+                            onChange={(event) =>
+                                setEditDescription(event.target.value)
+                            }
+                            required
+                        />
+
+                        <button type="submit" disabled={savingEdit}>
+                            {savingEdit ? "Saving..." : "Save"}
+                        </button>
+
+                        <button type="button" onClick={handleCancelEdit}>
+                            Cancel
+                        </button>
+                    </form>
+                ) : (
+                    <>
+                        <h3>{portfolio.name}</h3>
+
+                        <p>{portfolio.description}</p>
+
+                        <div className="portfolio-actions">
+                            <button
+                                type="button"
+                                onClick={(event) =>
+                                    handleEditPortfolio(event, portfolio)
+                                }
+                            >
+                                Edit
+                            </button>
+
+                            <button
+                                type="button"
+                                onClick={(event) =>
+                                    handleDeletePortfolio(event, portfolioId)
+                                }
+                            >
+                                Delete
+                            </button>
+                        </div>
+                    </>
+                )}
 
                                     <p>
                                         <strong>Holdings:</strong>{" "}

@@ -16,6 +16,8 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Instant;
 import java.util.List;
+import com.investtrack.backend.event.PortfolioUpdatedEvent;
+import org.springframework.context.ApplicationEventPublisher;
 
 @Service
 public class TransactionService {
@@ -23,14 +25,17 @@ public class TransactionService {
     private final TransactionRepository transactionRepository;
     private final HoldingRepository holdingRepository;
     private final PortfolioRepository portfolioRepository;
+    private final ApplicationEventPublisher eventPublisher;
 
     public TransactionService(
             TransactionRepository transactionRepository,
             HoldingRepository holdingRepository,
-            PortfolioRepository portfolioRepository) {
+            PortfolioRepository portfolioRepository,
+            ApplicationEventPublisher eventPublisher) {
         this.transactionRepository = transactionRepository;
         this.holdingRepository = holdingRepository;
         this.portfolioRepository = portfolioRepository;
+        this.eventPublisher = eventPublisher;
     }
 
     @Transactional
@@ -116,7 +121,15 @@ public class TransactionService {
                         : Instant.now());
         transaction.setCreatedAt(Instant.now());
 
-        return transactionRepository.save(transaction);
+        //return transactionRepository.save(transaction);
+
+        Transaction savedTransaction = transactionRepository.save(transaction);
+
+        eventPublisher.publishEvent(
+                new PortfolioUpdatedEvent(portfolioId, "TRANSACTION_UPDATED", owner)
+        );
+
+        return savedTransaction;
     }
 
     public List<Transaction> getTransactions(

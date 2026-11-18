@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import portfolioService from "../services/portfolioService";
+import { connectToPortfolio } from "../services/websocketService";
 
 function PortfolioDetails() {
     const { portfolioId } = useParams();
@@ -15,6 +16,13 @@ function PortfolioDetails() {
 
     const [error, setError] = useState("");
     const [success, setSuccess] = useState("");
+
+    // Holding edit state
+    const [editingHoldingId, setEditingHoldingId] = useState(null);
+    const [editHoldingSymbol, setEditHoldingSymbol] = useState("");
+    const [editHoldingQuantity, setEditHoldingQuantity] = useState("");
+    const [editHoldingCost, setEditHoldingCost] = useState("");
+    const [savingHolding, setSavingHolding] = useState(false);
 
     // Transaction form fields
     const [symbol, setSymbol] = useState("");
@@ -46,15 +54,28 @@ function PortfolioDetails() {
         }
     };
 
-    useEffect(() => {
+  useEffect(() => {
+        // Load initial portfolio data
         loadDetails();
+
+        // Connect to WebSocket and subscribe to portfolio updates
+        const disconnect = connectToPortfolio(portfolioId, (event) => {
+            console.log("Refreshing portfolio:", event.eventType);
+            loadDetails();
+        });
+
+        // Disconnect when leaving the page or changing portfolios
+        return () => {
+            disconnect();
+        };
     }, [portfolioId]);
 
     // Submit BUY or SELL transaction
     const handleTransaction = async (event) => {
         event.preventDefault();
 
-        try {
+        try 
+        {
             setSubmitting(true);
             setError("");
             setSuccess("");
@@ -74,15 +95,89 @@ function PortfolioDetails() {
             setPrice("");
 
             await loadDetails();
-        } catch (err) {
+        } 
+        catch (err) 
+        {
             console.error("Transaction error:", err);
 
             setError(
                 err.response?.data?.message ||
                 "Unable to process transaction."
             );
-        } finally {
+        }
+        finally 
+        {
             setSubmitting(false);
+        }
+    };
+
+    // Start editing a holding
+const handleEditHolding = (holding) => {
+    setEditingHoldingId(holding.id);
+    setEditHoldingSymbol(holding.symbol);
+    setEditHoldingQuantity(holding.quantity);
+    setEditHoldingCost(holding.averageCost);
+};
+
+// Cancel holding edit
+const handleCancelHoldingEdit = () => {
+    setEditingHoldingId(null);
+    setEditHoldingSymbol("");
+    setEditHoldingQuantity("");
+    setEditHoldingCost("");
+};
+
+// Save holding changes
+const handleSaveHolding = async (holdingId) => {
+    try {
+        setSavingHolding(true);
+        setError("");
+        setSuccess("");
+
+        await portfolioService.updateHolding(portfolioId, holdingId, {
+            symbol: editHoldingSymbol.trim().toUpperCase(),
+            quantity: Number(editHoldingQuantity),
+            averageCost: Number(editHoldingCost)
+        });
+
+        setSuccess("Holding updated successfully.");
+        handleCancelHoldingEdit();
+        await loadDetails();
+
+    } catch (err) {
+        console.error("Update holding error:", err);
+
+        setError(
+            err.response?.data?.message ||
+            "Unable to update holding."
+        );
+    } finally {
+        setSavingHolding(false);
+    }
+};
+
+    // Delete holding
+    const handleDeleteHolding = async (holdingId) => {
+        if (!window.confirm("Are you sure you want to delete this holding?")) {
+            return;
+        }
+
+        try {
+            setError("");
+            setSuccess("");
+
+            await portfolioService.deleteHolding(portfolioId, holdingId);
+
+            setSuccess("Holding deleted successfully.");
+            await loadDetails();
+
+        } catch (err) {
+            console.error("Delete holding error:", err);
+
+            setError(
+                err.response?.data?.message ||
+                "Unable to delete holding."
+            );
         }
     };
 
@@ -180,6 +275,7 @@ function PortfolioDetails() {
 
             </section>
 
+            
             {/* Holdings */}
             <section className="portfolio-section">
 
@@ -194,17 +290,88 @@ function PortfolioDetails() {
                                 <th>Symbol</th>
                                 <th>Quantity</th>
                                 <th>Average Cost</th>
+                                <th>Actions</th>
                             </tr>
                         </thead>
 
                         <tbody>
                             {holdings.map((holding) => (
                                 <tr key={holding.id}>
-                                    <td>{holding.symbol}</td>
-                                    <td>{holding.quantity}</td>
-                                    <td>
-                                        ${Number(holding.averageCost).toFixed(2)}
-                                    </td>
+                                    {editingHoldingId === holding.id ? (
+                                        <>
+                                            <td>
+                                                <input
+                                                    type="text"
+                                                    value={editHoldingSymbol}
+                                                    onChange={(event) =>
+                                                        setEditHoldingSymbol(event.target.value)
+                                                    }
+                                                    maxLength="10"
+                                                />
+                                            </td>
+
+                                            <td>
+                                                <input
+                                                    type="number"
+                                                    min="0.000001"
+                                                    step="any"
+                                                    value={editHoldingQuantity}
+                                                    onChange={(event) =>
+                                                        setEditHoldingQuantity(event.target.value)
+                                                    }
+                                                />
+                                            </td>
+
+                                            <td>
+                                                <input
+                                                    type="number"
+                                                    min="0.01"
+                                                    step="any"
+                                                    value={editHoldingCost}
+                                                    onChange={(event) =>
+                                                        setEditHoldingCost(event.target.value)
+                                                    }
+                                                />
+                                            </td>
+
+                                            <td>
+                                                <button
+                                                    onClick={() => handleSaveHolding(holding.id)}
+                                                    disabled={savingHolding}
+                                                >
+                                                    {savingHolding ? "Saving..." : "Save"}
+                                                </button>
+
+                                                <button
+                                                    onClick={handleCancelHoldingEdit}
+                                                    disabled={savingHolding}
+                                                >
+                                                    Cancel
+                                                </button>
+                                            </td>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <td>{holding.symbol}</td>
+                                            <td>{holding.quantity}</td>
+                                            <td>
+                                                ${Number(holding.averageCost).toFixed(2)}
+                                            </td>
+                                            <td>
+                                                <button
+                                                    onClick={() => handleEditHolding(holding)}
+                                                >
+                                                    Edit
+                                                </button>
+
+                                                <button
+                                                    onClick={() => handleDeleteHolding(holding.id)}
+                                                >
+                                                    Delete
+                                                </button>
+                                            </td>
+                                        </>
+                                    )}
                                 </tr>
                             ))}
                         </tbody>
@@ -212,6 +379,7 @@ function PortfolioDetails() {
                 )}
 
             </section>
+
 
             {/* Transaction History */}
             <section className="portfolio-section">

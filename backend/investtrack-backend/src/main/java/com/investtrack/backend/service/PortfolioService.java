@@ -16,17 +16,22 @@ import com.investtrack.backend.repository.HoldingRepository;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
+import com.investtrack.backend.event.PortfolioUpdatedEvent;
+import org.springframework.context.ApplicationEventPublisher;
 
 @Service
 public class PortfolioService {
 
     private final PortfolioRepository portfolioRepository;
     private final HoldingRepository holdingRepository;
+    private final ApplicationEventPublisher eventPublisher;
 
     public PortfolioService(PortfolioRepository portfolioRepository,
-                            HoldingRepository holdingRepository) {
+                            HoldingRepository holdingRepository,
+                            ApplicationEventPublisher eventPublisher) {
         this.portfolioRepository = portfolioRepository;
         this.holdingRepository = holdingRepository;
+        this.eventPublisher = eventPublisher;
     }
 
     // Create portfolio for authenticated user
@@ -39,7 +44,18 @@ public class PortfolioService {
         portfolio.setDescription(request.description());
         portfolio.setCreatedAt(Instant.now());
 
-        return portfolioRepository.save(portfolio);
+        //return portfolioRepository.save(portfolio);
+        Portfolio savedPortfolio = portfolioRepository.save(portfolio);
+
+        eventPublisher.publishEvent(
+                new PortfolioUpdatedEvent(savedPortfolio.getId(), "PORTFOLIO_CREATED", owner)
+        );
+
+        System.out.println("EVENT PUBLISHED: portfolioId="
+                + savedPortfolio.getId()
+                + ", owner=" + owner);
+
+        return savedPortfolio;
     }
 
     // Get only the authenticated user's portfolios
@@ -59,6 +75,9 @@ public class PortfolioService {
     public void deletePortfolio(String id, String owner) {
         Portfolio portfolio = getPortfolioById(id, owner);
         portfolioRepository.delete(portfolio);
+        eventPublisher.publishEvent(
+                new PortfolioUpdatedEvent(id, "PORTFOLIO_DELETED", owner)
+        );
     }
 
     // Update portfolio without changing its owner
@@ -70,7 +89,14 @@ public class PortfolioService {
         existingPortfolio.setName(request.name());
         existingPortfolio.setDescription(request.description());
 
-        return portfolioRepository.save(existingPortfolio);
+        //return portfolioRepository.save(existingPortfolio);
+        Portfolio savedPortfolio = portfolioRepository.save(existingPortfolio);
+
+        eventPublisher.publishEvent(
+                new PortfolioUpdatedEvent(id, "PORTFOLIO_UPDATED", owner)
+        );
+
+        return savedPortfolio;
     }
 
     // Partial update
@@ -104,7 +130,14 @@ public class PortfolioService {
             );
         }
 
-        return portfolioRepository.save(existingPortfolio);
+        //return portfolioRepository.save(existingPortfolio);
+        Portfolio savedPortfolio = portfolioRepository.save(existingPortfolio);
+
+        eventPublisher.publishEvent(
+                new PortfolioUpdatedEvent(id, "PORTFOLIO_UPDATED", owner)
+        );
+
+        return savedPortfolio;
     }
 
     private String validateString(
