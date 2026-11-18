@@ -1,16 +1,103 @@
-# React + Vite
+# InvestTrack Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+## Overview
 
-Currently, two official plugins are available:
+InvestTrack is a React-based investment portfolio management application. It provides a dashboard to manage portfolios, holdings, and investment transactions with real-time updates.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Technology Stack
 
-## React Compiler
+- React
+- JavaScript
+- Vite
+- Axios
+- React Router
+- WebSocket (STOMP)
+- npm
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Prerequisites
 
-## Expanding the ESLint configuration
+- Node.js
+- npm
+- InvestTrack Spring Boot backend running
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## Installation
+
+Clone the repository and navigate to the frontend directory.
+
+```powershell
+cd frontend
+npm install
+```
+
+## Run Application
+
+```powershell
+npm run dev
+```
+
+Application URL:
+
+http://localhost:5173
+
+## Production Build
+
+```powershell
+npm run build
+```
+
+Preview production build:
+
+```powershell
+npm run preview
+```
+
+## Features
+
+- User registration and login
+- JWT-based authentication
+- Portfolio dashboard
+- Create, edit, and delete portfolios
+- View portfolio details
+- Add, edit, and delete holdings
+- BUY and SELL transactions
+- Transaction history
+- Real-time portfolio updates using WebSocket
+
+## Backend Integration
+
+Backend API:
+
+http://localhost:8080
+
+The frontend communicates with the Spring Boot backend through REST APIs secured with JWT authentication.
+
+## Project Structure
+
+```text
+frontend/
+├── public/
+├── src/
+│   ├── pages/
+│   │   ├── Dashboard.jsx
+│   │   └── PortfolioDetails.jsx
+│   ├── services/
+│   │   ├── api.js
+│   │   ├── portfolioService.js
+│   │   └── websocketService.js
+│   ├── App.jsx
+│   └── main.jsx
+├── package.json
+├── package-lock.json
+└── README.md
+```
+
+## Development Tools
+
+- Vite provides fast development and Hot Module Replacement (HMR).
+- ESLint is used for code quality.
+- React Router handles application navigation.
+
+## React and Vite References
+
+- [React Documentation](https://react.dev/)
+- [Vite Documentation](https://
